@@ -5,7 +5,7 @@ output: html_notebook
 
 ```{r}
 library("igraph")
-edges <- read.csv( "DATASET/reduced-emails.edges" , header = TRUE, ,sep =' ')
+edges <- read.csv( "reduced-emails.edges" , header = TRUE, ,sep =' ')
 g <- graph_from_data_frame( edges , directed = FALSE )
 tkplot(g)
 degree(g)
@@ -18,5 +18,25 @@ sort(betweenness(g))
 sort(closeness(g))
 sort(eigen_centrality(g)$vector)
 
+```
+
+```{r}
+library(linkprediction)
+values_link_prediction <- proxfun(g, method="dist", value="edgelist")
+values_link_prediction[order(values_link_prediction$value, decreasing = TRUE),]
+```
+
+```{r}
+motifs(g, size=3, cut.prob = rep(0, 3))
+```
+
+```{r}
+library(econetwork)
+embedding(g, method="metric2vec", groups=NULL)
+```
+
+```{r}
+library(diffusionMap)
+diffusionKmeans(diffuse(as.matrix(as_adjacency_matrix(g))), 3, params = c(), Niter = 10, epsilon = 0.001)
 ```
 
