@@ -1,0 +1,22 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library("igraph")
+edges <- read.csv( "DATASET/reduced-emails.edges" , header = TRUE, ,sep =' ')
+g <- graph_from_data_frame( edges , directed = FALSE )
+tkplot(g)
+degree(g)
+all_nodes <- c(edges$from, edges$to)
+sort(unique(all_nodes))
+```
+```{r}
+#Medidas estructurales
+sort(betweenness(g))
+sort(closeness(g))
+sort(eigen_centrality(g)$vector)
+
+```
+
