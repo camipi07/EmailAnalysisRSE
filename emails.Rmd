@@ -1,0 +1,47 @@
+---
+title: "Emails analysis"
+output: html_notebook
+---
+
+```{r}
+library("igraph")
+edges <- read.csv( "emails.edges" , header = TRUE, ,sep ='')
+edges_with_relation <- edges
+edges_with_relation$fromIsGestor <- edges_with_relation$from < 144
+edges_with_relation$toIsGestor <- edges_with_relation$to < 144
+g <- graph.data.frame( edges , directed = FALSE )
+g <- simplify(g, edge.attr.comb = "sum")
+d <- degree(as.undirected(g)) #Grados de los nodos
+max(d) #Grado máximo
+min(d) #Grado mínimo
+d[which.max(degree(as.undirected(g)))] #Nodo que tiene el grado máximo
+#tkplot(g)
+```
+```{r}
+#Medidas estructurales
+sort(betweenness(g))
+sort(closeness(g))
+sort(eigen_centrality(g)$vector)
+
+```
+
+```{r}
+library(linkprediction)
+values_link_prediction <- proxfun(g, method="dist", value="edgelist")
+values_link_prediction[order(values_link_prediction$value, decreasing = TRUE),]
+```
+
+```{r}
+motifs(g, size=3, cut.prob = rep(0, 3))
+```
+
+```{r}
+library(econetwork)
+embedding(g, method="metric2vec", groups=NULL)
+```
+
+```{r}
+library(diffusionMap)
+diffusionKmeans(diffuse(as.matrix(as_adjacency_matrix(g))), 3, params = c(), Niter = 10, epsilon = 0.001)
+```
+
