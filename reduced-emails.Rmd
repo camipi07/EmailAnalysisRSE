@@ -7,39 +7,93 @@ output: html_notebook
 library("igraph")
 edges <- read.csv( "reduced-emails.edges" , header = TRUE, ,sep =' ')
 g <- graph_from_data_frame( edges , directed = FALSE )
-degree(g)
+d <- degree(as.undirected(g))
+#degree(g, mode = "in")
+#degree(g, mode = "out")
+max(d) #Grado máximo
+min(d) #Grado mínimo
+d[which.max(degree(as.undirected(g)))]
+plot(degree_distribution(as.undirected(g)))
 all_nodes <- c(edges$from, edges$to)
 sort(unique(all_nodes))
 tkplot(g)
 ```
 ```{r}
-#Medidas estructurales
+#Distancias en el grafo
+diameter(g, directed=TRUE, weight=NA)
+diameter(g, directed=FALSE, weight=NA)
+
+distances(as.undirected(g), weight=NA)
+mean_distance(as.undirected(g))
+all_shortest_paths(as.undirected(g), from=2, weights=NA)
+```
+```{r}
+#Componentes del grafo
+is.connected(g, mode="weak")
+is.connected(g, mode="strong")
+
+componentes <- components(g, mode="strong")
+componentes$csize
+component_distribution(g)
+
+cmax <- induced.subgraph(g, which(clusters(g)$membership == which.max(clusters(g)$csize)))
+
+articulation.points(g)
+```
+
+```{r}
+#Centralidad
 sort(betweenness(g))
 sort(closeness(g))
 sort(eigen_centrality(g)$vector)
-
+sort(page_rank(g,directed=FALSE,weights=NA)$vector)
 ```
 
 ```{r}
+#Medidas estructurales
+graph.density(as.undirected(g))
+#reciprocity(g)
+transitivity(g)
+
+clique.number(g)
+cliques(g)
+
+assortativity.degree(g)
+# En emails con nominal -> tipos es la columna edges_with_relation$type
+
 library(linkprediction)
-values_link_prediction <- proxfun(g, method="dist", value="edgelist")
-values_link_prediction[order(values_link_prediction$value, decreasing = TRUE),]
+values_link_prediction <- proxfun(as.undirected(g), method="dist", value="edgelist")
+probabilidades <- c()
+for (val in 1:143) {
+  froms <- subset(values_link_prediction,from == val, select = c('value'))
+  tos <- subset(values_link_prediction,to == val, select = c('value'))
+  probabilidades <- c(probabilidades, sum(froms)+sum(tos))
+}
+probabilidades[which.max(probabilidades)]
+probabilidades[which.min(probabilidades)]
 ```
 
 ```{r}
-motifs(g, size=3, cut.prob = rep(0, 3))
+#Comunidades - Girvan-Newman
+ebc <- edge.betweenness.community(as.undirected(g))
+plot(ebc, as.undirected(g))
+plot_dendrogram(ebc)
 ```
 
 ```{r}
-library(econetwork)
-embedding <- embedding(g$graph, method="metric2vec", groups=NULL)
+#Comunidades - Particiones espectrales
+lec <- leading.eigenvector.community(as.undirected(g))
+plot(lec, as.undirected(g))
+```
+
+
+```{r}
+#Comunidades - Louvain
+plot(cluster_louvain(as.undirected(g)),as.undirected(g))
 ```
 
 ```{r}
-library(diffusionMap)
-adjacencymatrix <- as.matrix(as_adjacency_matrix(g))
-dmap <- diffuse(dist(adjacencymatrix),eps.val=0.05) # compute diffusion map
-diffusionKmeans(dmap, 2, params = c(), Niter = 10, epsilon = 0.001)
-#diffusionKmeans(diffuse(as.matrix(as_adjacency_matrix(g))), 2, params = c(), Niter = 10, epsilon = 0.001)
+#Comunidades - Leiden
+plot(cluster_leiden(as.undirected(g),objective_function = "modularity"),as.undirected(g))
 ```
 

@@ -5,11 +5,19 @@ output: html_notebook
 
 ```{r}
 library("igraph")
+library("tidyr")
 edges <- read.csv( "emails.edges" , header = TRUE, ,sep ='')
 edges_with_relation <- edges
 edges_with_relation$fromIsGestor <- edges_with_relation$from < 144
 edges_with_relation$toIsGestor <- edges_with_relation$to < 144
-g <- graph.data.frame( edges , directed = FALSE )
+edges_with_relation <- edges_with_relation %>% unite("type", fromIsGestor:toIsGestor, remove=FALSE)
+edges_with_relation$type <- as.factor(edges_with_relation$type)
+levels(edges_with_relation$type) <- list("1"="FALSE_FALSE", "2"="FALSE_TRUE", "3"="TRUE_FALSE", "4"="TRUE_TRUE")
+
+edges_with_relation <- edges_with_relation[-c(5,6)]
+  
+
+g <- graph.data.frame( edges , directed = TRUE )
 g <- simplify(g, edge.attr.comb = "sum")
 d <- degree(as.undirected(g)) #Grados de los nodos
 max(d) #Grado máximo
