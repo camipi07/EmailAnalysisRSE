@@ -1,0 +1,371 @@
+---
+title: "R Notebook"
+output:
+  html_document: 
+    toc: yes
+    df_print: default
+---
+
+
+### Importación de librerías
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library('ggplot2')
+library(dplyr)
+library(forecast)
+library(stats)
+```
+
+### Carga de los datos
+
+```{r}
+emails <- read.csv("emails-timestamps.edges",row.names = NULL ,header=TRUE, sep = " ")
+colnames(emails) <- c("sender","receiver","email_count","timestamp")
+```
+
+### Conversión de los timestamps y filtrado al rango 1999-2003
+
+```{r}
+emails$timestamp <-as_datetime(emails$timestamp)
+emails$timestamp <- ymd_hms(emails$timestamp)
+emails <- emails %>% filter(timestamp > '1999-01-01' & timestamp < '2005-01-01' )
+```
+
+### Agregación de número mensajes por (emisor-> receptor)
+
+```{r}
+top_pairs <- emails %>%
+  group_by(sender, receiver) %>%
+  summarize(total_emails = sum(email_count)) %>%
+  arrange(desc(total_emails))
+
+top_pairs$conversation<-paste(top_pairs$sender, top_pairs$receiver, sep = "->")
+```
+
+10 más activos (con mayor número de correos enviados)
+
+```{r}
+most_active <- top_pairs %>% head(10)
+```
+
+Y ploteamos: 
+
+```{r}
+ggplot(most_active, aes(x = conversation, y = total_emails)) +
+  geom_col() +
+  coord_flip()
+```
+```{r}
+subset(top_pairs, sender == 3978)
+```
+```{r}
+emails_by_day <- emails %>%
+  mutate(day = floor_date(timestamp, "day")) %>%
+  group_by(day) %>%
+  summarize(total_emails = sum(email_count))
+```
+
+```{r}
+fig <- plot_ly(emails_by_day, type = 'scatter', mode = 'lines')%>%
+  add_trace(x = ~day, y = ~total_emails)%>%
+  layout(showlegend = F)
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by day) between 1999 and 2003",
+         xaxis = list(title = "Date",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+
+fig
+```
+
+```{r}
+emails_by_month <- emails %>%
+  mutate(month = floor_date(timestamp, "month")) %>%
+  group_by(month) %>%
+  summarize(total_emails = sum(email_count))
+```
+
+```{r}
+fig <- plot_ly(emails_by_month, type = 'scatter', mode = 'lines')%>%
+  add_trace(x = ~month, y = ~total_emails)%>%
+  layout(showlegend = F)
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by month) between 1999 and 2003",
+         xaxis = list(title = "Date",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+
+fig
+```
+
+```{r}
+fig <- plot_ly(x = names(table(year(emails$timestamp))), y = table(year(emails$timestamp)), type = "bar")
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by year) between 1999 and 2003",
+         xaxis = list(title = "Year",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+
+fig
+```
+
+```{r}
+df_1999 <- subset(emails, year(emails$timestamp) == 1999)
+
+emails_by_month_1999  <- df_1999  %>%
+  mutate(month = floor_date(timestamp, "month")) %>%
+  group_by(month) %>%
+  summarize(total_emails = sum(email_count))
+
+fig <- plot_ly(emails_by_month_1999 , x = ~month(month,label=TRUE), y = ~total_emails, type = "bar")
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by month) in 1999",
+         xaxis = list(title = "Month",
+                      zerolinecolor = '#ffff',
+                      type='category',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+fig
+```
+```{r}
+df_2000 <- subset(emails, year(emails$timestamp) == 2000)
+
+emails_by_month_2000 <- df_2000 %>%
+  mutate(month = floor_date(timestamp, "month")) %>%
+  group_by(month) %>%
+  summarize(total_emails = sum(email_count))
+
+fig <- plot_ly(emails_by_month_2000, x = ~month(month,label=TRUE), y = ~total_emails, type = "bar")
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by month) in 2000",
+         xaxis = list(title = "Month",
+                      zerolinecolor = '#ffff',
+                      type='category',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+fig
+```
+
+```{r}
+df_2001 <- subset(emails, year(emails$timestamp) == 2001)
+
+emails_by_month_2001 <- df_2001 %>%
+  mutate(month = floor_date(timestamp, "month")) %>%
+  group_by(month) %>%
+  summarize(total_emails = sum(email_count))
+
+fig <- plot_ly(emails_by_month_2001, x = ~month(month,label=TRUE), y = ~total_emails, type = "bar")
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by month) in 2001",
+         xaxis = list(title = "Month",
+                      zerolinecolor = '#ffff',
+                      type='category',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+fig
+```
+
+```{r}
+df_2002 <- subset(emails, year(emails$timestamp) == 2002)
+
+emails_by_month_2002 <- df_2002 %>%
+  mutate(month = floor_date(timestamp, "month")) %>%
+  group_by(month) %>%
+  summarize(total_emails = sum(email_count))
+
+fig <- plot_ly(emails_by_month_2002, x = ~month(month,label=TRUE), y = ~total_emails, type = "bar")
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by month) in 2002",
+         xaxis = list(title = "Month",
+                      zerolinecolor = '#ffff',
+                      type='category',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+fig
+```
+
+```{r}
+df_2003 <- subset(emails, year(emails$timestamp) == 2003)
+
+emails_by_month_2003 <- df_2003 %>%
+  mutate(month = floor_date(timestamp, "month")) %>%
+  group_by(month) %>%
+  summarize(total_emails = sum(email_count))
+
+fig <- plot_ly(emails_by_month_2003, x = ~month(month,label=TRUE), y = ~total_emails, type = "bar")
+
+fig <- fig %>%
+  layout(title = "Email Count (aggregated by month) in 2003",
+         xaxis = list(title = "Month",
+                      zerolinecolor = '#ffff',
+                      type='category',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         yaxis = list(title= "Email Count",
+                      zerolinecolor = '#ffff',
+                      zerolinewidth = 2,
+                      gridcolor = 'ffff'),
+         plot_bgcolor='#e5ecf6', width = 900)
+fig
+```
+
+
+
+
+```{r}
+# Group the data by year and sender, and count the number of emails sent by each user in each year
+emails$year <- year(emails$timestamp)
+emails_by_year <- emails %>%
+  group_by(year, sender) %>%
+  summarise(n_emails = n())
+
+# View the resulting data frame
+head(emails_by_year)
+
+# Find the top sender by year
+most_active <- emails_by_year %>%
+  group_by(year) %>%
+  top_n(1, n_emails)
+
+# View the resulting data frame
+head(most_active)
+```
+```{r}
+# Create a bar chart of the most active user in each year
+plot_ly(most_active, x = ~factor(year), y = ~n_emails, type = "bar", text = ~sender) %>%
+  layout(title = "Most Active User (Sender) by Year", xaxis = list(title = "Year"), yaxis = list(title = "Number of Emails Sent"))
+```
+
+
+```{r}
+# Group the data by year and sender, and count the number of emails sent by each user in each year
+emails$year <- year(emails$timestamp)
+emails_by_year <- emails %>%
+  group_by(year, receiver) %>%
+  summarise(n_emails = n())
+
+# View the resulting data frame
+head(emails_by_year)
+
+# Find the top sender by year
+most_active_receiver <- emails_by_year %>%
+  group_by(year) %>%
+  top_n(1, n_emails)
+
+# Create a bar chart of the most active user in each year
+plot_ly(most_active_receiver, x = ~factor(year), y = ~n_emails, type = "bar", text = ~receiver) %>%
+  layout(title = "Most Active User (Receiver) by Year", xaxis = list(title = "Year"), yaxis = list(title = "Number of Emails Sent"))
+```
+
+
+
+```{r}
+# Extract the hour from the timestamp column
+emails$hour <- hour(ymd_hms(emails$timestamp))
+
+# Group the data by hour and count the number of emails sent in each hour
+emails_by_hour <- emails %>%
+  group_by(hour) %>%
+  summarise(n_emails = n())
+
+# Create a bar chart of the number of emails sent in each hour
+plot_ly(emails_by_hour, x = ~hour, y = ~n_emails, type = "bar") %>%
+  layout(title = "Number of Emails Sent by Hour", xaxis = list(title = "Hour of Day", tickmode = "array", tickvals = c(0:23), ticktext = c(0:23)), yaxis = list(title = "Number of Emails"))
+```
+
+
+```{r}
+# Extract the day of the week from the timestamp column
+emails$day_of_week <- wday(ymd_hms(emails$timestamp), label = TRUE)
+
+# Group the data by day of the week and count the number of emails sent on each day
+emails_by_day <- emails %>%
+  group_by(day_of_week) %>%
+  summarise(n_emails = n())
+
+
+# Create a bar chart of the number of emails sent on each day
+plot_ly(emails_by_day, x = ~day_of_week, y = ~n_emails, type = "bar") %>%
+  layout(title = "Number of Emails Sent by Day of Week", xaxis = list(title = "Day of Week"), yaxis = list(title = "Number of Emails"))
+```
+
+
+
+
+
+
+## Detección de anomalías
+```{r}
+emails_ts <- emails %>%
+  mutate(date = floor_date(timestamp, "day")) %>%
+  group_by(date) %>%
+  summarize(total_emails = sum(email_count)) %>%
+  as.ts(frequency = 7)
+```
+
+
+```{r}
+library(anomaly)
+
+# Train an isolation forest model on the time series
+model <- isolationForest(emails_ts, ntree = 100)
+
+# Predict anomalies using the model
+anomaly_scores <- predict(model, emails_ts)
+
+# Plot the time series with the anomaly scores
+plot(emails_ts, type = "l", ylim = c(-8, 8))
+lines(anomaly_scores, col = "red")
+```
+
+
+
+

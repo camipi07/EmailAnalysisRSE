@@ -1,0 +1,108 @@
+---
+title: "Emails analysis"
+output: html_notebook
+---
+
+```{r}
+library("igraph")
+library("plotly")
+edges <- read.csv( "emails.edges" , header = TRUE, ,sep ='')
+edges_with_relation <- edges
+edges_with_relation$fromGestor <- edges_with_relation$from < 144
+edges_with_relation$toGestor <- edges_with_relation$to < 144
+g <- graph.data.frame( edges , directed = TRUE)
+g <- simplify(g, edge.attr.comb = "sum")
+#d <- degree(as.undirected(g)) #Grados de los nodos
+d <- degree(g, mode="in") #Grados de los nodos
+max(d) #Grado máximo
+min(d) #Grado mínimo
+d[which.max(degree(as.undirected(g)))] #Nodo que tiene el grado máximo
+```
+
+```{r}
+# Creación de una tabla con los ID's
+nodes_df <- as.data.frame(d)
+nodes_df <- cbind(id = rownames(nodes_df), nodes_df)
+rownames(nodes_df) <- 1:nrow(nodes_df)
+nodes_df$id <- as.numeric(nodes_df$id)
+cat("\n Número de empleados\n",length(unique(nodes_df[["id"]])))
+nodes_df$isGestor <- ifelse(nodes_df$id < 144, 1, 0)
+```
+```{r}
+nodes_manager_df <- subset(nodes_df, isGestor == 1)
+nodes_regular_employee_df <- subset(nodes_df, isGestor == 0)
+```
+
+
+
+```{r}
+fig <- plot_ly(x=nodes_manager_df$d, histfunc='sum', type = "histogram", name = "Managers", nbinsx=25) 
+
+fig <- fig %>% layout(yaxis=list(type='linear'))
+
+fig <- fig %>%
+        layout(title = 'Distribución de los grados de managers', plot_bgcolor = "#e5ecf6")
+
+fig <- fig %>% layout(
+  barmode="group",
+  bargap=0.2)
+
+fig
+```
+
+
+```{r}
+fig <- plot_ly(x=nodes_regular_employee_df$d, histfunc='sum', type = "histogram", name = "Regular employees", nbinsx=25) 
+
+fig <- fig %>% layout(yaxis=list(type='linear'))
+
+fig <- fig %>%
+        layout(title = 'Distribución de los grados de empleados regulares', plot_bgcolor = "#e5ecf6")
+
+fig <- fig %>% layout(
+  barmode="group",
+  bargap=0.2)
+
+fig
+```
+
+```{r}
+cat("Grado medio de los nodos managers: \t", mean(nodes_manager_df$d))
+cat("\nGrado medio de los nodos regulares: \t", mean(nodes_regular_employee_df$d))
+
+cat("\nGrado máximo de los nodos managers: \t", max(nodes_manager_df$d))
+cat("\nGrado máximo de los nodos regulares: \TELECO/", max(nodes_regular_employee_df$d))
+
+```
+
+```{r}
+top_degrees <- nodes_df %>%
+  arrange(desc(d)) %>% head(10)
+```
+
+```{r}
+fig <- plot_ly(
+  x = as.factor(top_degrees$id),
+  y = top_degrees$d,
+  name = "Top 10 nodos con mayor grado medio",
+  text = top_degrees$d, # add the text argument
+  textposition = "inside", # display the text inside the bars
+  type = "bar"
+)
+fig
+```
+
+
+
+
+
+```{r}
+#Medidas estructurales
+b=betweenness(g)
+```
+
+```{r}
+sort(closeness(g))
+```
+
+
