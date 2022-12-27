@@ -31,7 +31,7 @@ colnames(emails) <- c("sender","receiver","email_count","timestamp")
 ```{r}
 emails$timestamp <-as_datetime(emails$timestamp)
 emails$timestamp <- ymd_hms(emails$timestamp)
-emails <- emails %>% filter(timestamp > '1999-01-01' & timestamp < '2005-01-01' )
+emails <- emails %>% filter(timestamp > '1999-01-01' & timestamp < '2003-01-01' )
 ```
 
 ### Agregación de número mensajes por (emisor-> receptor)
@@ -275,14 +275,11 @@ most_active <- emails_by_year %>%
   group_by(year) %>%
   top_n(1, n_emails)
 
-# View the resulting data frame
-head(most_active)
-```
-```{r}
 # Create a bar chart of the most active user in each year
 plot_ly(most_active, x = ~factor(year), y = ~n_emails, type = "bar", text = ~sender) %>%
   layout(title = "Most Active User (Sender) by Year", xaxis = list(title = "Year"), yaxis = list(title = "Number of Emails Sent"))
 ```
+
 
 
 ```{r}
@@ -305,6 +302,59 @@ plot_ly(most_active_receiver, x = ~factor(year), y = ~n_emails, type = "bar", te
   layout(title = "Most Active User (Receiver) by Year", xaxis = list(title = "Year"), yaxis = list(title = "Number of Emails Sent"))
 ```
 
+
+
+
+
+```{r}
+emails_not_self_emailed <- subset(emails, sender != receiver)
+```
+
+
+```{r}
+# Group the data by year and sender, and count the number of emails sent by each user in each year
+emails_not_self_emailed$year <- year(emails_not_self_emailed$timestamp)
+emails_by_year <- emails_not_self_emailed %>%
+  group_by(year, sender) %>%
+  summarise(n_emails = n())
+
+# View the resulting data frame
+head(emails_by_year)
+
+# Find the top sender by year
+most_active <- emails_by_year %>%
+  group_by(year) %>%
+  top_n(1, n_emails)
+
+head(most_active)
+
+# Create a bar chart of the most active user in each year
+plot_ly(most_active, x = ~factor(year), y = ~n_emails, type = "bar", text = ~sender) %>%
+  layout(title = "Most Active User (Sender) by Year", xaxis = list(title = "Year"), yaxis = list(title = "Number of Emails Sent"))
+```
+
+
+
+
+```{r}
+# Group the data by year and sender, and count the number of emails sent by each user in each year
+emails_not_self_emailed$year <- year(emails_not_self_emailed$timestamp)
+emails_by_year <- emails_not_self_emailed %>%
+  group_by(year, receiver) %>%
+  summarise(n_emails = n())
+
+# View the resulting data frame
+head(emails_by_year)
+
+# Find the top sender by year
+most_active_receiver <- emails_by_year %>%
+  group_by(year) %>%
+  top_n(1, n_emails)
+
+# Create a bar chart of the most active user in each year
+plot_ly(most_active_receiver, x = ~factor(year), y = ~n_emails, type = "bar", text = ~receiver) %>%
+  layout(title = "Most Active User (Receiver) by Year", xaxis = list(title = "Year"), yaxis = list(title = "Number of Emails Sent"))
+```
 
 
 ```{r}
@@ -339,7 +389,34 @@ plot_ly(emails_by_day, x = ~day_of_week, y = ~n_emails, type = "bar") %>%
 
 
 
+## Exportación de un emails.edges reducido
 
+```{r}
+emails_reduced <- read.csv("emails-timestamps.edges",row.names = NULL ,header=TRUE, sep = " ")
+colnames(emails_reduced) <- c("sender","receiver","email_count","timestamp")
+```
+
+```{r}
+emails_reduced$timestamp <-as_datetime(emails_reduced$timestamp)
+emails_reduced$timestamp <- ymd_hms(emails_reduced$timestamp)
+emails_december_2000 <- emails_reduced %>% filter(timestamp > '2000-12-01' & timestamp <'2000-12-31' )
+```
+
+```{r}
+emails_reduced <- emails_december_2000 %>%
+  group_by(sender, receiver) %>%
+  summarize(total_emails = sum(email_count)) 
+colnames(emails_reduced) <- c("from","to","weight")
+```
+
+```{r}
+write.table(emails_reduced[, c("from","to","weight")], 
+            file = "emails-reduced-december-2000.edges", 
+            row.names = FALSE, 
+            col.names = TRUE, 
+            sep = " ", 
+            quote = FALSE)
+```
 
 
 ## Detección de anomalías

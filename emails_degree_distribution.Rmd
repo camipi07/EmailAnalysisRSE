@@ -6,14 +6,16 @@ output: html_notebook
 ```{r}
 library("igraph")
 library("plotly")
+```
+
+```{r}
 edges <- read.csv( "emails.edges" , header = TRUE, ,sep ='')
 edges_with_relation <- edges
 edges_with_relation$fromGestor <- edges_with_relation$from < 144
 edges_with_relation$toGestor <- edges_with_relation$to < 144
 g <- graph.data.frame( edges , directed = TRUE)
 g <- simplify(g, edge.attr.comb = "sum")
-#d <- degree(as.undirected(g)) #Grados de los nodos
-d <- degree(g, mode="in") #Grados de los nodos
+d <- degree(as.undirected(g)) #Grados de los nodos
 max(d) #Grado máximo
 min(d) #Grado mínimo
 d[which.max(degree(as.undirected(g)))] #Nodo que tiene el grado máximo
@@ -26,14 +28,35 @@ nodes_df <- cbind(id = rownames(nodes_df), nodes_df)
 rownames(nodes_df) <- 1:nrow(nodes_df)
 nodes_df$id <- as.numeric(nodes_df$id)
 cat("\n Número de empleados\n",length(unique(nodes_df[["id"]])))
+nodes_df$d_in <- as.data.frame(degree(g, mode="in"))$d
+nodes_df$d_out <- as.data.frame(degree(g, mode="out"))$d
 nodes_df$isGestor <- ifelse(nodes_df$id < 144, 1, 0)
+
+nodes_df <- nodes_df %>%
+  arrange(nodes_df$id)
+
 ```
+
+```{r}
+fig <- plot_ly(x=nodes_df$d, type = "box", name = "") 
+
+fig <- fig %>% layout(yaxis=list(type='linear'))
+
+fig <- fig %>%
+        layout(title = 'Distribución de los grados de los nodos', plot_bgcolor = "#e5ecf6")
+
+fig <- fig %>% layout(
+  barmode="group",
+  bargap=0.2)
+
+fig
+```
+
+
 ```{r}
 nodes_manager_df <- subset(nodes_df, isGestor == 1)
 nodes_regular_employee_df <- subset(nodes_df, isGestor == 0)
 ```
-
-
 
 ```{r}
 fig <- plot_ly(x=nodes_manager_df$d, histfunc='sum', type = "histogram", name = "Managers", nbinsx=25) 
@@ -49,7 +72,6 @@ fig <- fig %>% layout(
 
 fig
 ```
-
 
 ```{r}
 fig <- plot_ly(x=nodes_regular_employee_df$d, histfunc='sum', type = "histogram", name = "Regular employees", nbinsx=25) 
@@ -71,7 +93,9 @@ cat("Grado medio de los nodos managers: \t", mean(nodes_manager_df$d))
 cat("\nGrado medio de los nodos regulares: \t", mean(nodes_regular_employee_df$d))
 
 cat("\nGrado máximo de los nodos managers: \t", max(nodes_manager_df$d))
-cat("\nGrado máximo de los nodos regulares: \TELECO/", max(nodes_regular_employee_df$d))
+cat("\nGrado máximo de los nodos regulares: \t", max(nodes_regular_employee_df$d))
+
+degree
 
 ```
 
@@ -84,7 +108,7 @@ top_degrees <- nodes_df %>%
 fig <- plot_ly(
   x = as.factor(top_degrees$id),
   y = top_degrees$d,
-  name = "Top 10 nodos con mayor grado medio",
+  name = "Top 10 nodos con mayor grado",
   text = top_degrees$d, # add the text argument
   textposition = "inside", # display the text inside the bars
   type = "bar"
@@ -95,14 +119,274 @@ fig
 
 
 
+### Distribución de grados entrantes y salientes
+
+
+```{r}
+top_degrees_in <- nodes_df %>%
+  arrange(desc(d_in)) %>% head(10)
+
+fig <- plot_ly(
+  x = as.factor(top_degrees_in$id),
+  y = top_degrees_in$d_in,
+  name = "Top 10 nodos con mayor grado entrante",
+  text = top_degrees_in$d_in, # add the text argument
+  textposition = "inside", # display the text inside the bars
+  type = "bar"
+)
+fig
+```
+
+```{r}
+top_degrees_in <- nodes_df %>%
+  arrange(desc(d_out)) %>% head(10)
+
+fig <- plot_ly(
+  x = as.factor(top_degrees_in$id),
+  y = top_degrees_in$d_out,
+  name = "Top 10 nodos con mayor grado saliente",
+  text = top_degrees_in$d_out, # add the text argument
+  textposition = "inside", # display the text inside the bars
+  type = "bar"
+)
+fig
+
+```
+
+```{r}
+fig <- plot_ly(x=nodes_manager_df$d_in, histfunc='sum', type = "histogram", name = "Grados entrantes", nbinsx=25)  %>%add_trace(x=nodes_manager_df$d_out, histfunc='sum', type = "histogram", name = "Grados salientes", nbinsx=25) 
+
+fig <- fig %>% layout(yaxis=list(type='linear'))
+
+fig <- fig %>%
+        layout(title = 'Distribución de los grados entrantes/salientes de gestores', plot_bgcolor = "#e5ecf6")
+
+fig <- fig %>% layout(
+  barmode="group",
+  bargap=0.2)
+
+fig
+```
+
+
+```{r}
+fig <- plot_ly(x=nodes_regular_employee_df$d_in, histfunc='sum', type = "histogram", name = "Grados entrantes", nbinsx=25)  %>%add_trace(x=nodes_regular_employee_df$d_out, histfunc='sum', type = "histogram", name = "Grados salientes", nbinsx=25) 
+
+fig <- fig %>% layout(yaxis=list(type='linear'))
+
+fig <- fig %>%
+        layout(title = 'Distribución de los grados entrantes/salientes de empleados regulares', plot_bgcolor = "#e5ecf6")
+
+fig <- fig %>% layout(
+  barmode="group",
+  bargap=0.2)
+
+fig
+```
+
+### Simplificación para medidas estructurales
+
+Dado que no es computacionalmente factible calcular las medidas estructurales con el grafo de emails.edges original, hemos decidido simplificar el problema planteando un subgrafo colapsado para un periodo de tiempo más reducido a partir del fichero emails-timestamps.edges, en este caso se ha considerado el año 2001.
+
+
+### Medidas estructurales sobre el grafo reducido
+
+
+```{r}
+edges <- read.csv( "emails-reduced-december-2000.edges" , header = TRUE, ,sep ='')
+edges_with_relation <- edges
+edges_with_relation$weight <-NULL
+edges_with_relation$fromGestor <- edges_with_relation$from < 144
+edges_with_relation$toGestor <- edges_with_relation$to < 144
+g <- graph.data.frame( edges , directed = TRUE)
+g <- simplify(g, edge.attr.comb = "sum")
+d <- degree(as.undirected(g)) #Grados de los nodos
+max(d) #Grado máximo
+min(d) #Grado mínimo
+d[which.max(degree(as.undirected(g)))] #Nodo que tiene el grado máximo
+```
+
+
+
+```{r}
+diameter(g, directed=TRUE, weight=NA)
+diameter(g, directed=FALSE, weight=NA)
+#distances(as.undirected(g), weight=NA) # --> Demasiado grande!
+mean_distance(as.undirected(g))
+#all_shortest_paths(as.undirected(g), from=2, weights=NA) # --> Demasiado grande!
+```
+
+```{r}
+#Componentes del grafo
+is.connected(g, mode="weak")
+is.connected(g, mode="strong")
+```
+
+```{r}
+componentes <- components(g, mode="strong")
+
+length(componentes$csize)
+
+cd <-component_distribution(g)
+
+cmax <- induced.subgraph(g, which(clusters(g)$membership == which.max(clusters(g)$csize)))
+```
+```{r}
+articulation.points(g)
+```
+```{r}
+max(componentes$csize)
+```
+
+```{r}
+V(g)$isGestor <- nodes_df$isGestor
+```
+
 
 ```{r}
 #Medidas estructurales
-b=betweenness(g)
+graph.density(as.undirected(g))
+transitivity(g)
+reciprocity(g)
+assortativity.degree(g)
+assortativity_nominal(g,as.factor(V(g)$isGestor))
 ```
 
 ```{r}
-sort(closeness(g))
+clique.number(g)
+cliques(g)
 ```
+
+### Medidas de centralidad
+
+```{r}
+b <- betweenness(g)
+```
+
+```{r}
+c <- closeness(g)
+```
+
+```{r}
+e <- eigen_centrality(g)$vector
+```
+
+```{r}
+pr <- page_rank(g,directed=FALSE,weights=NA)$vector
+```
+
+```{r}
+nodes_df$b <-b
+nodes_df$c <-c
+nodes_df$e <-e
+nodes_df$pr <-pr
+```
+
+```{r}
+top_betweenness <- nodes_df %>%
+  arrange(desc(b)) %>% head(5)
+
+fig <- plot_ly(
+  x = as.factor(top_betweenness$id),
+  y = top_betweenness$b,
+  name = "Top 10 nodos con mayor grado",
+  text = top_betweenness$b, # add the text argument
+  textposition = "inside", # display the text inside the bars
+  type = "bar"
+)
+fig <- fig %>%
+        layout(title = 'Top 5 centralidades de intermediario', plot_bgcolor = "#e5ecf6")
+
+fig
+```
+
+
+
+```{r}
+top_closenness <- nodes_df %>%
+  arrange(desc(c)) %>% head(5)
+
+fig <- plot_ly(
+  x = as.factor(top_closenness$id),
+  y = top_closenness$c,
+  name = "Top 10 nodos con mayor grado",
+  text = top_closenness$c, # add the text argument
+  textposition = "inside", # display the text inside the bars
+  type = "bar"
+)
+fig <- fig %>%
+        layout(title = 'Top 5 centralidades de cercanía', plot_bgcolor = "#e5ecf6")
+
+fig
+```
+
+```{r}
+top_eigenvector <- nodes_df %>%
+  arrange(desc(e)) %>% head(5)
+
+fig <- plot_ly(
+  x = as.factor(top_eigenvector$id),
+  y = top_eigenvector$e,
+  name = "Top 10 nodos con mayor grado",
+  text = top_eigenvector$e, # add the text argument
+  textposition = "inside", # display the text inside the bars
+  type = "bar"
+)
+fig <- fig %>%
+        layout(title = 'Top 5 centralidades de autovector', plot_bgcolor = "#e5ecf6")
+
+fig
+```
+
+
+```{r}
+top_pagerank<- nodes_df %>%
+  arrange(desc(pr)) %>% head(5)
+
+fig <- plot_ly(
+  x = as.factor(top_pagerank$id),
+  y = top_pagerank$pr,
+  name = "Top 10 nodos con mayor grado",
+  text = top_pagerank$pr, # add the text argument
+  textposition = "inside", # display the text inside the bars
+  type = "bar"
+)
+fig <- fig %>%
+        layout(title = 'Top 5 centralidades de PageRank', plot_bgcolor = "#e5ecf6")
+
+fig
+```
+
+
+### Comunidades
+
+```{r}
+#Comunidades - Girvan-Newman
+ebc <- edge.betweenness.community(as.undirected(g))
+```
+
+```{r}
+plot(ebc, as.undirected(g))
+plot_dendrogram(ebc)
+```
+
+
+```{r}
+#Comunidades - Particiones espectrales
+lec <- leading.eigenvector.community(as.undirected(g))
+plot(lec, as.undirected(g))
+```
+
+```{r}
+#Comunidades - Louvain
+plot(cluster_louvain(as.undirected(g)),as.undirected(g))
+```
+
+```{r}
+#Comunidades - Leiden
+plot(cluster_leiden(as.undirected(g),objective_function = "modularity"),as.undirected(g))
+```
+
+
 
 
