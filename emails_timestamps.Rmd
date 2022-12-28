@@ -399,11 +399,11 @@ colnames(emails_reduced) <- c("sender","receiver","email_count","timestamp")
 ```{r}
 emails_reduced$timestamp <-as_datetime(emails_reduced$timestamp)
 emails_reduced$timestamp <- ymd_hms(emails_reduced$timestamp)
-emails_december_2000 <- emails_reduced %>% filter(timestamp > '2000-12-01' & timestamp <'2000-12-31' )
+emails_reduced <- emails_reduced %>% filter(timestamp > '2000-01-01' & timestamp <'2000-01-15' )
 ```
 
 ```{r}
-emails_reduced <- emails_december_2000 %>%
+emails_reduced <- emails_reduced %>%
   group_by(sender, receiver) %>%
   summarize(total_emails = sum(email_count)) 
 colnames(emails_reduced) <- c("from","to","weight")
@@ -411,7 +411,7 @@ colnames(emails_reduced) <- c("from","to","weight")
 
 ```{r}
 write.table(emails_reduced[, c("from","to","weight")], 
-            file = "emails-reduced-december-2000.edges", 
+            file = "emails-reduced.edges", 
             row.names = FALSE, 
             col.names = TRUE, 
             sep = " ", 

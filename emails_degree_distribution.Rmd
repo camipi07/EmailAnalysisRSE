@@ -193,7 +193,7 @@ Dado que no es computacionalmente factible calcular las medidas estructurales co
 
 
 ```{r}
-edges <- read.csv( "emails-reduced-december-2000.edges" , header = TRUE, ,sep ='')
+edges <- read.csv( "emails-reduced.edges" , header = TRUE, ,sep ='')
 edges_with_relation <- edges
 edges_with_relation$weight <-NULL
 edges_with_relation$fromGestor <- edges_with_relation$from < 144
@@ -366,6 +366,10 @@ ebc <- edge.betweenness.community(as.undirected(g))
 ```
 
 ```{r}
+ebc
+```
+
+```{r}
 plot(ebc, as.undirected(g))
 plot_dendrogram(ebc)
 ```
@@ -374,17 +378,23 @@ plot_dendrogram(ebc)
 ```{r}
 #Comunidades - Particiones espectrales
 lec <- leading.eigenvector.community(as.undirected(g))
+lec
 plot(lec, as.undirected(g))
 ```
 
 ```{r}
 #Comunidades - Louvain
-plot(cluster_louvain(as.undirected(g)),as.undirected(g))
+louv <- cluster_louvain(as.undirected(g))
+louv
+plot(louv,as.undirected(g))
 ```
+
 
 ```{r}
 #Comunidades - Leiden
-plot(cluster_leiden(as.undirected(g),objective_function = "modularity"),as.undirected(g))
+leid <- cluster_leiden(as.undirected(g),objective_function = "modularity")
+leid
+plot(leid, as.undirected(g))
 ```
 
 
